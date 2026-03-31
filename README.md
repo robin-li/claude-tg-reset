@@ -62,7 +62,11 @@ cd claude-tg-reset
 /plugin install claude-tg-reset
 ```
 
-Then run `install.sh` from the plugin directory to set up the launchd service.
+Then run the installer to set up the launchd service:
+
+```bash
+~/.claude/plugins/marketplaces/*/claude-tg-reset/install.sh
+```
 
 ## Usage
 
@@ -100,8 +104,17 @@ touch ~/.claude/scripts/.stop
 
 ## Uninstallation
 
+If you cloned the repo:
+
 ```bash
+cd claude-tg-reset
 ./uninstall.sh
+```
+
+Or run directly via one-liner:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/robin-li/claude-tg-reset/main/uninstall.sh | bash
 ```
 
 This removes the launchd service, monitor script, and wrapper script.
@@ -119,6 +132,7 @@ claude-tg-reset/
 ├── skills/
 │   └── tg-reset/
 │       └── SKILL.md         # /tg-reset skill definition
+├── get.sh                   # One-liner remote installer
 ├── install.sh               # One-click installer
 ├── uninstall.sh             # One-click uninstaller
 ├── README.md
