@@ -23,18 +23,16 @@ flowchart TB
     A["Telegram (User)"]
     B["reset-monitor.py\n(launchd daemon)"]
 
-    A -- "#reset / clear context" --> B
-    A -- "#stop / 停止ccc" --> B
+    A -- "#reset / #stop" --> B
     B -- "getUpdates (long polling)" --> A
 
     B -- "kill process" --> C
-    B -. "touch .stop" .-> S[".stop flag"]
+    B -. "#stop: touch .stop" .-> S[".stop flag"]
+    S -. "skip restart" .-> wrapper
 
     subgraph wrapper ["claude-wrapper.sh  ↻ auto-restart"]
         C["claude CLI"]
     end
-
-    S -. "skip restart" .-> wrapper
 ```
 
 ## Prerequisites
