@@ -8,7 +8,7 @@
 
 **[English](README.md)** | **[繁體中文](README.zh-TW.md)** | **[简体中文](README.zh-CN.md)** | **Tiếng Việt**
 
-Khi sử dụng Claude Code qua Telegram Channel (CCC), không có cách nào để xóa context cuộc hội thoại từ xa. Plugin này giải quyết vấn đề đó bằng một daemon giám sát nhẹ, lắng nghe lệnh đặt lại từ Telegram và tự động khởi động lại phiên Claude Code.
+Khi sử dụng Claude Code qua Telegram Channel (CCC), không có cách nào để xóa context cuộc hội thoại từ xa. Plugin này giải quyết vấn đề đó bằng một daemon giám sát file tín hiệu nhẹ, phát hiện file tín hiệu và tự động khởi động lại phiên Claude Code. Lệnh đặt lại gửi qua Telegram được Claude xử lý trực tiếp và ghi file tín hiệu — monitor phát hiện và khởi động lại tiến trình.
 
 ## Tính năng
 
@@ -23,14 +23,14 @@ Khi sử dụng Claude Code qua Telegram Channel (CCC), không có cách nào đ
 ```mermaid
 flowchart TB
     A["Telegram (User)"]
-    B["reset-monitor.py\n(launchd daemon)"]
 
-    A -- "#reset / #stop" --> B
-    B -- "getUpdates (long polling)" --> A
+    A -- "#reset / #stop" --> C
+
+    C -- "touch .reset / .stop" --> F[".reset / .stop flag"]
+    F -- "phát hiện tín hiệu" --> B["reset-monitor.py\n(launchd daemon)"]
 
     B -- "kill process" --> C
-    B -. "#stop: touch .stop" .-> S[".stop flag"]
-    S -. "skip restart" .-> wrapper
+    S[".stop flag"] -. "bỏ qua khởi động lại" .-> wrapper
 
     subgraph wrapper ["claude-wrapper.sh  ↻ auto-restart"]
         C["claude CLI"]
@@ -89,7 +89,7 @@ Sau đó chạy script cài đặt để thiết lập dịch vụ launchd:
 
 ### Đặt lại qua Telegram
 
-Gửi bất kỳ lệnh nào sau đây đến Telegram bot của bạn:
+Gửi bất kỳ lệnh nào sau đây đến Telegram bot — Claude sẽ xử lý lệnh và kích hoạt đặt lại:
 
 | Lệnh | Ngôn ngữ |
 |------|----------|
@@ -110,9 +110,13 @@ Gửi bất kỳ lệnh nào sau đây để dừng wrapper (sẽ KHÔNG tự đ
 | `停止ccc` / `停止 ccc` | 中文 |
 | `停止claude` / `停止 claude` | 中文 |
 
-### Dừng wrapper thủ công
+### Đặt lại / Dừng thủ công (qua terminal hoặc SSH)
 
 ```bash
+# Đặt lại (tự động khởi động lại)
+touch ~/.claude/scripts/.reset
+
+# Dừng (không khởi động lại)
 touch ~/.claude/scripts/.stop
 ```
 
@@ -140,7 +144,7 @@ claude-tg-reset/
 ├── .claude-plugin/
 │   └── plugin.json          # Metadata plugin
 ├── src/
-│   └── reset_monitor.py     # Daemon polling Telegram
+│   └── reset_monitor.py     # Daemon giám sát file tín hiệu
 ├── bin/
 │   └── claude-wrapper.sh    # Wrapper tự động khởi động lại
 ├── skills/
@@ -156,8 +160,9 @@ claude-tg-reset/
 ## Cách hoạt động
 
 1. **`install.sh`** sao chép script vào `~/.claude/scripts/` và đăng ký dịch vụ launchd, để `reset_monitor.py` tự động khởi động khi đăng nhập.
-2. **`reset_monitor.py`** long-poll Telegram Bot API (`getUpdates`) để lắng nghe tin nhắn. Khi nhận được lệnh đặt lại từ người dùng được ủy quyền (dựa trên `~/.claude/channels/telegram/access.json`), nó sẽ kết thúc tiến trình Claude Code đang chạy.
+2. **`reset_monitor.py`** giám sát file tín hiệu (`~/.claude/scripts/.reset` và `~/.claude/scripts/.stop`). Khi phát hiện file tín hiệu, nó kết thúc tiến trình Claude Code. File `.reset` bị xóa sau khi xử lý (wrapper tự khởi động lại); file `.stop` được giữ lại (wrapper thoát).
 3. **`claude-wrapper.sh`** chạy Claude Code trong vòng lặp vô hạn. Khi tiến trình bị kết thúc, nó đợi 3 giây rồi tự động khởi động lại phiên mới.
+4. Khi người dùng gửi lệnh đặt lại/dừng qua Telegram, Claude xử lý trực tiếp và ghi file tín hiệu tương ứng, monitor sau đó phát hiện và thực thi.
 
 ## Giấy phép
 

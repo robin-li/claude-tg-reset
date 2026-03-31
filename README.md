@@ -8,7 +8,7 @@
 
 **English** | **[繁體中文](README.zh-TW.md)** | **[简体中文](README.zh-CN.md)** | **[Tiếng Việt](README.vi.md)**
 
-When using Claude Code via the Telegram channel (CCC), there's no built-in way to clear the conversation context remotely. This plugin solves that by adding a lightweight monitor daemon that listens for reset commands from Telegram and automatically restarts the Claude Code session with a fresh context.
+When using Claude Code via the Telegram channel (CCC), there's no built-in way to clear the conversation context remotely. This plugin solves that by adding a lightweight file-based monitor daemon that watches for signal files and automatically restarts the Claude Code session with a fresh context. Reset commands sent via Telegram are handled by Claude itself, which writes the signal file — the monitor then detects it and restarts the process.
 
 ## Features
 
@@ -23,14 +23,14 @@ When using Claude Code via the Telegram channel (CCC), there's no built-in way t
 ```mermaid
 flowchart TB
     A["Telegram (User)"]
-    B["reset-monitor.py\n(launchd daemon)"]
 
-    A -- "#reset / #stop" --> B
-    B -- "getUpdates (long polling)" --> A
+    A -- "#reset / #stop" --> C
+
+    C -- "touch .reset / .stop" --> F[".reset / .stop flag"]
+    F -- "detect signal" --> B["reset-monitor.py\n(launchd daemon)"]
 
     B -- "kill process" --> C
-    B -. "#stop: touch .stop" .-> S[".stop flag"]
-    S -. "skip restart" .-> wrapper
+    S[".stop flag"] -. "skip restart" .-> wrapper
 
     subgraph wrapper ["claude-wrapper.sh  ↻ auto-restart"]
         C["claude CLI"]
@@ -89,7 +89,7 @@ Then run the installer to set up the launchd service:
 
 ### Reset via Telegram
 
-Send any of these commands to your Telegram bot:
+Send any of these commands to your Telegram bot — Claude will process the command internally and trigger the reset:
 
 | Command | Language |
 |---------|----------|
@@ -110,9 +110,13 @@ Send any of these commands to stop the wrapper (it will NOT auto-restart):
 | `停止ccc` / `停止 ccc` | 中文 |
 | `停止claude` / `停止 claude` | 中文 |
 
-### Stop the wrapper manually
+### Reset / Stop manually (via terminal or SSH)
 
 ```bash
+# Reset (auto-restarts)
+touch ~/.claude/scripts/.reset
+
+# Stop (no restart)
 touch ~/.claude/scripts/.stop
 ```
 
@@ -140,7 +144,7 @@ claude-tg-reset/
 ├── .claude-plugin/
 │   └── plugin.json          # Plugin metadata
 ├── src/
-│   └── reset_monitor.py     # Telegram polling daemon
+│   └── reset_monitor.py     # File-based signal monitor daemon
 ├── bin/
 │   └── claude-wrapper.sh    # Auto-restart wrapper
 ├── skills/
@@ -156,8 +160,9 @@ claude-tg-reset/
 ## How It Works
 
 1. **`install.sh`** copies scripts to `~/.claude/scripts/` and registers a launchd service that starts `reset_monitor.py` on login.
-2. **`reset_monitor.py`** long-polls the Telegram Bot API (`getUpdates`). When a reset command is received from an authorized user (based on `~/.claude/channels/telegram/access.json`), it kills the running Claude Code process.
+2. **`reset_monitor.py`** watches for signal files (`~/.claude/scripts/.reset` and `~/.claude/scripts/.stop`). When a signal file is detected, it kills the running Claude Code process. The `.reset` file is removed after processing (wrapper auto-restarts); the `.stop` file is preserved (wrapper exits).
 3. **`claude-wrapper.sh`** runs Claude Code in an infinite loop. When the process is killed by the monitor, it waits 3 seconds and restarts with a fresh session.
+4. When users send reset/stop commands via Telegram, Claude processes them directly and writes the corresponding signal file, which the monitor then detects.
 
 ## License
 

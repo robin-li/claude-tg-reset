@@ -8,7 +8,7 @@
 
 **[English](README.md)** | **[繁體中文](README.zh-TW.md)** | **简体中文** | **[Tiếng Việt](README.vi.md)**
 
-通过 Telegram Channel（CCC）使用 Claude Code 时，无法从远程清除对话 context。本插件通过一个轻量级的监听 daemon，接收 Telegram 的重置指令并自动重启 Claude Code session。
+通过 Telegram Channel（CCC）使用 Claude Code 时，无法从远程清除对话 context。本插件通过一个轻量级的文件信号监听 daemon，检测信号文件并自动重启 Claude Code session。通过 Telegram 发送的重置指令由 Claude 自行处理并写入信号文件，monitor 检测后重启进程。
 
 ## 功能特性
 
@@ -23,14 +23,14 @@
 ```mermaid
 flowchart TB
     A["Telegram (User)"]
-    B["reset-monitor.py\n(launchd daemon)"]
 
-    A -- "#reset / #stop" --> B
-    B -- "getUpdates (long polling)" --> A
+    A -- "#reset / #stop" --> C
+
+    C -- "touch .reset / .stop" --> F[".reset / .stop flag"]
+    F -- "检测信号" --> B["reset-monitor.py\n(launchd daemon)"]
 
     B -- "kill process" --> C
-    B -. "#stop: touch .stop" .-> S[".stop flag"]
-    S -. "skip restart" .-> wrapper
+    S[".stop flag"] -. "跳过重启" .-> wrapper
 
     subgraph wrapper ["claude-wrapper.sh  ↻ auto-restart"]
         C["claude CLI"]
@@ -89,7 +89,7 @@ cd claude-tg-reset
 
 ### 通过 Telegram 重置
 
-向你的 Telegram bot 发送以下任一命令：
+向你的 Telegram bot 发送以下任一命令 — Claude 会处理命令并触发重置：
 
 | 命令 | 语言 |
 |------|------|
@@ -110,9 +110,13 @@ cd claude-tg-reset
 | `停止ccc` / `停止 ccc` | 中文 |
 | `停止claude` / `停止 claude` | 中文 |
 
-### 手动停止 wrapper
+### 手动重置 / 停止（通过终端或 SSH）
 
 ```bash
+# 重置（自动重启）
+touch ~/.claude/scripts/.reset
+
+# 停止（不重启）
 touch ~/.claude/scripts/.stop
 ```
 
@@ -140,7 +144,7 @@ claude-tg-reset/
 ├── .claude-plugin/
 │   └── plugin.json          # 插件 metadata
 ├── src/
-│   └── reset_monitor.py     # Telegram 轮询 daemon
+│   └── reset_monitor.py     # 文件信号监听 daemon
 ├── bin/
 │   └── claude-wrapper.sh    # 自动重启 wrapper
 ├── skills/
@@ -156,8 +160,9 @@ claude-tg-reset/
 ## 工作原理
 
 1. **`install.sh`** 将脚本复制到 `~/.claude/scripts/`，并注册 launchd 服务，使 `reset_monitor.py` 在登录时自动启动。
-2. **`reset_monitor.py`** 通过长轮询 Telegram Bot API（`getUpdates`）监听消息。收到授权用户的重置命令（依据 `~/.claude/channels/telegram/access.json`）后，终止正在运行的 Claude Code 进程。
+2. **`reset_monitor.py`** 监控信号文件（`~/.claude/scripts/.reset` 和 `~/.claude/scripts/.stop`）。检测到信号文件后，终止正在运行的 Claude Code 进程。`.reset` 处理后删除（wrapper 自动重启）；`.stop` 保留（wrapper 停止）。
 3. **`claude-wrapper.sh`** 在无限循环中运行 Claude Code。进程被终止后，等待 3 秒自动重启新 session。
+4. 用户通过 Telegram 发送重置/停止命令时，Claude 会直接处理并写入对应的信号文件，monitor 随后检测并执行。
 
 ## 许可证
 
