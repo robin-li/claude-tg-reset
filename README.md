@@ -20,16 +20,16 @@ When using Claude Code via the Telegram channel (CCC), there's no built-in way t
 
 ```mermaid
 flowchart TB
-    A["🤳 Telegram\n(User)"]
-    B["🐍 reset-monitor.py\n(launchd daemon)"]
+    A["Telegram (User)"]
+    B["reset-monitor.py\n(launchd daemon)"]
 
-    A -- '"#reset" / "clear context" / "重置 session"' --> B
-    B -- "getUpdates\n(long polling)" --> A
+    A -- "#reset / clear context / 重置 session" --> B
+    B -- "getUpdates (long polling)" --> A
 
     B -- "kill process" --> C
 
     subgraph wrapper ["claude-wrapper.sh  ↻ auto-restart"]
-        C["⚡ claude CLI"]
+        C["claude CLI"]
     end
 ```
 
