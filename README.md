@@ -23,7 +23,7 @@ flowchart TB
     A["Telegram (User)"]
     B["reset-monitor.py\n(launchd daemon)"]
 
-    A -- "#reset / clear context / 重置 session" --> B
+    A -- "#reset / clear context" --> B
     B -- "getUpdates (long polling)" --> A
 
     B -- "kill process" --> C
