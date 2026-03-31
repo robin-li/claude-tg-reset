@@ -27,6 +27,12 @@ RESET_TRIGGERS = [
     "reset context", "clear context",
     "reset session", "reset",
 ]
+STOP_TRIGGERS = [
+    "#stop",
+    "停止ccc", "停止 ccc",
+    "停止claude", "停止 claude",
+]
+STOP_FLAG = os.path.join(CLAUDE_DIR, "scripts", ".stop")
 POLL_TIMEOUT = 30
 
 
@@ -65,6 +71,16 @@ def is_reset_command(text):
         return False
     text_lower = text.strip().lower()
     for trigger in RESET_TRIGGERS:
+        if trigger.lower() in text_lower:
+            return True
+    return False
+
+
+def is_stop_command(text):
+    if not text:
+        return False
+    text_lower = text.strip().lower()
+    for trigger in STOP_TRIGGERS:
         if trigger.lower() in text_lower:
             return True
     return False
@@ -161,6 +177,24 @@ def main():
                 chat_id = msg.get("chat", {}).get("id")
 
                 if not chat_id or user_id not in allowed_users:
+                    continue
+
+                if is_stop_command(text):
+                    print(f"[reset-monitor] Stop triggered by user {user_id}: {text}")
+                    sys.stdout.flush()
+
+                    send_message(token, chat_id, "正在停止 Claude Code...")
+
+                    # Touch .stop flag so wrapper won't restart
+                    os.makedirs(os.path.dirname(STOP_FLAG), exist_ok=True)
+                    with open(STOP_FLAG, "a"):
+                        os.utime(STOP_FLAG, None)
+
+                    killed = kill_claude()
+                    if killed:
+                        send_message(token, chat_id, "Claude Code 已停止。")
+                    else:
+                        send_message(token, chat_id, "未找到運行中的 Claude Code 進程，已設置停止標記。")
                     continue
 
                 if not is_reset_command(text):

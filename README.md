@@ -96,7 +96,17 @@ Send any of these commands to your Telegram bot:
 | `清除 context` / `清除context` | 中文 |
 | `重置 session` / `重置session` | 中文 |
 
-### Stop the wrapper
+### Stop Claude Code via Telegram
+
+Send any of these commands to stop the wrapper (it will NOT auto-restart):
+
+| Command | Language |
+|---------|----------|
+| `#stop` | Universal |
+| `停止ccc` / `停止 ccc` | 中文 |
+| `停止claude` / `停止 claude` | 中文 |
+
+### Stop the wrapper manually
 
 ```bash
 touch ~/.claude/scripts/.stop
