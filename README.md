@@ -1,33 +1,56 @@
 # claude-tg-reset
 
-Remote reset Claude Code session via Telegram commands.
+> Remote reset Claude Code session via Telegram commands.
 
-## Problem
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Platform: macOS](https://img.shields.io/badge/Platform-macOS-lightgrey.svg)]()
+[![Python 3](https://img.shields.io/badge/Python-3.x-yellow.svg)]()
 
-When using Claude Code via the Telegram channel (CCC), there's no built-in way to clear the conversation context remotely. This plugin adds that capability.
+When using Claude Code via the Telegram channel (CCC), there's no built-in way to clear the conversation context remotely. This plugin solves that by adding a lightweight monitor daemon that listens for reset commands from Telegram and automatically restarts the Claude Code session with a fresh context.
 
-## How It Works
+## Features
 
-1. **Reset Monitor** — A Python daemon polls your Telegram bot for reset commands
-2. **Wrapper Script** — Runs Claude Code in a loop, auto-restarting after a reset
-3. When you send a reset command via Telegram, the monitor kills the Claude process and the wrapper automatically restarts it with a fresh context
+- Remotely reset Claude Code context from Telegram
+- Auto-restart after reset — no manual intervention needed
+- Multi-language trigger commands (English / 中文)
+- Runs as a macOS launchd background service
+- One-click install / uninstall
+
+## Architecture
+
+```mermaid
+flowchart TB
+    A["🤳 Telegram\n(User)"]
+    B["🐍 reset-monitor.py\n(launchd daemon)"]
+
+    A -- '"#reset" / "clear context" / "重置 session"' --> B
+    B -- "getUpdates\n(long polling)" --> A
+
+    B -- "kill process" --> C
+
+    subgraph wrapper ["claude-wrapper.sh  ↻ auto-restart"]
+        C["⚡ claude CLI"]
+    end
+```
 
 ## Prerequisites
 
-- macOS (launchd-based)
-- Python 3
-- [Claude Code](https://code.claude.com) CLI installed
-- [Telegram plugin](https://github.com/anthropics/claude-code-plugins) configured with a bot token
+- **macOS** (launchd-based service management)
+- **Python 3** (standard library only, no pip install required)
+- **[Claude Code](https://code.claude.com)** CLI installed
+- **[Telegram plugin](https://github.com/anthropics/claude-code-plugins)** configured with a bot token
 
 ## Installation
 
+**Option 1: Clone from GitHub**
+
 ```bash
-git clone https://github.com/anthropics/claude-tg-reset.git
+git clone https://github.com/robin-li/claude-tg-reset.git
 cd claude-tg-reset
 ./install.sh
 ```
 
-Or install as a Claude Code plugin:
+**Option 2: Install as Claude Code plugin**
 
 ```
 /plugin install claude-tg-reset
@@ -37,7 +60,7 @@ Then run `install.sh` from the plugin directory to set up the launchd service.
 
 ## Usage
 
-### Start Claude Code with auto-restart
+### Start Claude Code with auto-restart wrapper
 
 ```bash
 # Default working directory (~)
@@ -75,23 +98,33 @@ touch ~/.claude/scripts/.stop
 ./uninstall.sh
 ```
 
-## Architecture
+This removes the launchd service, monitor script, and wrapper script.
+
+## Project Structure
 
 ```
-┌─────────────┐     getUpdates      ┌──────────────────┐
-│  Telegram    │ ◄────────────────── │  reset-monitor.py │
-│  (User)      │ ────────────────► │  (launchd daemon)  │
-│              │    "#reset"         └────────┬─────────┘
-└─────────────┘                              │ kill
-                                             ▼
-                                   ┌──────────────────┐
-                                   │ claude-wrapper.sh │
-                                   │   ┌────────────┐  │
-                                   │   │ claude CLI  │  │ ← auto-restart
-                                   │   └────────────┘  │
-                                   └──────────────────┘
+claude-tg-reset/
+├── .claude-plugin/
+│   └── plugin.json          # Plugin metadata
+├── src/
+│   └── reset_monitor.py     # Telegram polling daemon
+├── bin/
+│   └── claude-wrapper.sh    # Auto-restart wrapper
+├── skills/
+│   └── tg-reset/
+│       └── SKILL.md         # /tg-reset skill definition
+├── install.sh               # One-click installer
+├── uninstall.sh             # One-click uninstaller
+├── README.md
+└── LICENSE
 ```
+
+## How It Works
+
+1. **`install.sh`** copies scripts to `~/.claude/scripts/` and registers a launchd service that starts `reset_monitor.py` on login.
+2. **`reset_monitor.py`** long-polls the Telegram Bot API (`getUpdates`). When a reset command is received from an authorized user (based on `~/.claude/channels/telegram/access.json`), it kills the running Claude Code process.
+3. **`claude-wrapper.sh`** runs Claude Code in an infinite loop. When the process is killed by the monitor, it waits 3 seconds and restarts with a fresh session.
 
 ## License
 
-MIT
+[MIT](LICENSE)
