@@ -6,7 +6,7 @@
 [![Platform: macOS](https://img.shields.io/badge/Platform-macOS-lightgrey.svg)]()
 [![Python 3](https://img.shields.io/badge/Python-3.x-yellow.svg)]()
 
-**English** | **[繁體中文](README.zh-TW.md)** | **[简体中文](README.zh-CN.md)**
+**English** | **[繁體中文](README.zh-TW.md)** | **[简体中文](README.zh-CN.md)** | **[Tiếng Việt](README.vi.md)**
 
 When using Claude Code via the Telegram channel (CCC), there's no built-in way to clear the conversation context remotely. This plugin solves that by adding a lightweight monitor daemon that listens for reset commands from Telegram and automatically restarts the Claude Code session with a fresh context.
 
