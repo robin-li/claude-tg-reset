@@ -42,7 +42,13 @@ flowchart TB
 
 ## Installation
 
-**Option 1: Clone from GitHub**
+**Option 1: One-liner**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/robin-li/claude-tg-reset/main/get.sh | bash
+```
+
+**Option 2: Clone from GitHub**
 
 ```bash
 git clone https://github.com/robin-li/claude-tg-reset.git
@@ -50,7 +56,7 @@ cd claude-tg-reset
 ./install.sh
 ```
 
-**Option 2: Install as Claude Code plugin**
+**Option 3: Install as Claude Code plugin**
 
 ```
 /plugin install claude-tg-reset
