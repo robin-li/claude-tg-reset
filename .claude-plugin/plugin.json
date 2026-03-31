@@ -1,0 +1,9 @@
+{
+  "name": "claude-tg-reset",
+  "description": "Remote reset Claude Code session via Telegram commands (#reset, clear context, etc.)",
+  "version": "0.1.0",
+  "author": {
+    "name": "Robin"
+  },
+  "keywords": ["telegram", "reset", "session", "remote", "context"]
+}
