@@ -26,13 +26,17 @@ flowchart TB
     B["reset-monitor.py\n(launchd daemon)"]
 
     A -- "#reset / clear context" --> B
+    A -- "#stop / 停止ccc" --> B
     B -- "getUpdates (long polling)" --> A
 
     B -- "kill process" --> C
+    B -. "touch .stop" .-> S[".stop flag"]
 
     subgraph wrapper ["claude-wrapper.sh  ↻ auto-restart"]
         C["claude CLI"]
     end
+
+    S -. "skip restart" .-> wrapper
 ```
 
 ## 前置要求
