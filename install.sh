@@ -114,18 +114,14 @@ cat > "$WRAPPER_PLIST_PATH" <<PLIST
     <string>$WRAPPER_PLIST_NAME</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/bin/screen</string>
-        <string>-d</string>
-        <string>-m</string>
-        <string>-S</string>
-        <string>claude-tg</string>
-        <string>$INSTALL_DIR/claude-wrapper.sh</string>
-        <string>$HOME</string>
+        <string>/usr/bin/login</string>
+        <string>-fp</string>
+        <string>$USER</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
     <key>ThrottleInterval</key>
-    <integer>120</integer>
+    <integer>60</integer>
     <key>StandardOutPath</key>
     <string>$LOG_DIR/claude-wrapper-launchd.log</string>
     <key>StandardErrorPath</key>
@@ -134,8 +130,6 @@ cat > "$WRAPPER_PLIST_PATH" <<PLIST
     <dict>
         <key>HOME</key>
         <string>$HOME</string>
-        <key>PATH</key>
-        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$HOME/.local/bin:/opt/homebrew/bin</string>
         <key>TERM</key>
         <string>xterm-256color</string>
     </dict>

@@ -10,7 +10,7 @@ CLAUDE_BIN="$(command -v claude 2>/dev/null || echo "$HOME/.local/bin/claude")"
 STOP_FILE="$HOME/.claude/scripts/.stop"
 LOG_DIR="$HOME/.claude/logs"
 LOG_FILE="$LOG_DIR/claude-wrapper.log"
-SESSION_NAME="claude-tg"
+PID_FILE="$HOME/.claude/scripts/.wrapper.pid"
 
 WORK_DIR="$HOME"
 MODEL="sonnet"
@@ -37,17 +37,23 @@ log() {
 
 rm -f "$STOP_FILE"
 
-# Prevent multiple wrapper instances (only needed when NOT inside screen)
-if [ -z "$STY" ]; then
-    # We're NOT in screen yet - check if a session already exists
-    EXISTING=$(screen -ls 2>/dev/null | grep "$SESSION_NAME" | awk -F. '{print $1}' | awk '{print $1}' | head -1)
-    if [ -n "$EXISTING" ]; then
-        echo "Session $SESSION_NAME already exists (PID $EXISTING), skipping duplicate start"
+# Prevent multiple wrapper instances using PID file
+if [ -f "$PID_FILE" ]; then
+    OLD_PID=$(cat "$PID_FILE" 2>/dev/null)
+    if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
+        log "Wrapper already running (PID $OLD_PID). Exiting."
         exit 0
+    else
+        log "Stale PID file (PID $OLD_PID). Removing."
+        rm -f "$PID_FILE"
     fi
 fi
 
-log "Wrapper started. Working directory: $WORK_DIR, Model: $MODEL"
+# Write our PID
+echo $$ > "$PID_FILE"
+trap "rm -f '$PID_FILE'" EXIT
+
+log "Wrapper started (PID $$). Working directory: $WORK_DIR, Model: $MODEL"
 log "Claude binary: $CLAUDE_BIN"
 log "To stop: touch $STOP_FILE"
 
