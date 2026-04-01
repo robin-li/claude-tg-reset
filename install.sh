@@ -114,8 +114,9 @@ cat > "$WRAPPER_PLIST_PATH" <<PLIST
     <string>$WRAPPER_PLIST_NAME</string>
     <key>ProgramArguments</key>
     <array>
-        <string>$SCREEN_BIN</string>
+        <string>/usr/bin/screen</string>
         <string>-d</string>
+        <string>-m</string>
         <string>-S</string>
         <string>claude-tg</string>
         <string>$INSTALL_DIR/claude-wrapper.sh</string>
@@ -124,7 +125,7 @@ cat > "$WRAPPER_PLIST_PATH" <<PLIST
     <key>RunAtLoad</key>
     <true/>
     <key>ThrottleInterval</key>
-    <integer>60</integer>
+    <integer>120</integer>
     <key>StandardOutPath</key>
     <string>$LOG_DIR/claude-wrapper-launchd.log</string>
     <key>StandardErrorPath</key>
