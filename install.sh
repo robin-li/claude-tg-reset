@@ -34,28 +34,35 @@ if ! command -v screen &>/dev/null; then
     exit 1
 fi
 
-if [ ! -f "$HOME/.claude/channels/telegram/.env" ]; then
-    echo "ERROR: Telegram bot token not configured."
-    echo "Please set up the Telegram plugin first: /telegram:configure"
-    exit 1
-fi
-
 echo "  All prerequisites met."
 
 # Create directories
 echo "[2/6] Creating directories..."
-mkdir -p "$INSTALL_DIR" "$LOG_DIR"
+mkdir -p "$INSTALL_DIR"
+mkdir -p "$LOG_DIR"
+echo "  Directories ready."
 
-# Clean up stale stop file so wrapper starts fresh
+# Clean up stale state
 echo "[3/6] Cleaning up stale state..."
-if [ -f "$STOP_FILE" ]; then
-    rm -f "$STOP_FILE"
-    echo "  Removed stale .stop file."
-else
-    echo "  No stale state found."
+rm -f "$STOP_FILE"
+rm -f "$INSTALL_DIR/.reset"
+rm -f "$INSTALL_DIR/.wrapper.pid"
+
+# Find and kill any existing wrapper processes
+EXISTING_WRAPPER=$(ps aux | grep "[c]laude-wrapper" | awk '{print $2}' | head -1)
+if [ -n "$EXISTING_WRAPPER" ]; then
+    echo "  Killing existing wrapper (PID $EXISTING_WRAPPER)..."
+    kill -9 "$EXISTING_WRAPPER" 2>/dev/null || true
 fi
 
-# Copy scripts
+# Kill any existing screen sessions
+for sock in $(screen -ls 2>/dev/null | grep "claude-tg" | awk -F. '{print $1}' | awk '{print $1}'); do
+    echo "  Removing screen session $sock..."
+    screen -S "$sock" -X quit 2>/dev/null || true
+done
+echo "  Stale state cleaned."
+
+# Install scripts
 echo "[4/6] Installing scripts..."
 cp "$PLUGIN_DIR/src/reset_monitor.py" "$INSTALL_DIR/reset-monitor.py"
 chmod +x "$INSTALL_DIR/reset-monitor.py"
@@ -97,14 +104,7 @@ PLIST
 
 echo "  Generated: $MONITOR_PLIST_PATH"
 
-# --- Claude wrapper plist (uses screen for TTY) ---
-CLAUDE_BIN="$(command -v claude)"
-SCREEN_BIN="/usr/bin/screen"
-# Fallback: check homebrew screen
-if [ ! -x "$SCREEN_BIN" ]; then
-    SCREEN_BIN="$(command -v screen)"
-fi
-
+# --- Claude wrapper plist (uses screen to provide TTY) ---
 cat > "$WRAPPER_PLIST_PATH" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -114,14 +114,18 @@ cat > "$WRAPPER_PLIST_PATH" <<PLIST
     <string>$WRAPPER_PLIST_NAME</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/bin/login</string>
-        <string>-fp</string>
-        <string>$USER</string>
+        <string>/usr/bin/screen</string>
+        <string>-d</string>
+        <string>-m</string>
+        <string>-S</string>
+        <string>claude-tg</string>
+        <string>$INSTALL_DIR/claude-wrapper.sh</string>
+        <string>$HOME</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
     <key>ThrottleInterval</key>
-    <integer>60</integer>
+    <integer>120</integer>
     <key>StandardOutPath</key>
     <string>$LOG_DIR/claude-wrapper-launchd.log</string>
     <key>StandardErrorPath</key>
