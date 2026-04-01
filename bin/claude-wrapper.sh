@@ -38,9 +38,13 @@ log() {
 rm -f "$STOP_FILE"
 
 # Ensure only one screen session exists for this wrapper
-# Kill any existing session with same name to prevent duplicates
+# Kill any existing session with same name (but not our own if already in screen)
 _screen_cleanup() {
-    # Find all screen sockets matching our session name and kill them
+    # Skip if we're already inside this screen session (STY is set)
+    if [ -n "$STY" ]; then
+        return
+    fi
+    # Kill any existing screen sessions with same name
     for sock in $(screen -ls 2>/dev/null | grep "$SESSION_NAME" | awk -F. '{print $1}' | awk '{print $1}'); do
         screen -S "$sock" -X quit 2>/dev/null || true
     done
