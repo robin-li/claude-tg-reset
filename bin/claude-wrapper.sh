@@ -37,19 +37,15 @@ log() {
 
 rm -f "$STOP_FILE"
 
-# Ensure only one screen session exists for this wrapper
-# Kill any existing session with same name (but not our own if already in screen)
-_screen_cleanup() {
-    # Skip if we're already inside this screen session (STY is set)
-    if [ -n "$STY" ]; then
-        return
+# Prevent multiple wrapper instances (only needed when NOT inside screen)
+if [ -z "$STY" ]; then
+    # We're NOT in screen yet - check if a session already exists
+    EXISTING=$(screen -ls 2>/dev/null | grep "$SESSION_NAME" | awk -F. '{print $1}' | awk '{print $1}' | head -1)
+    if [ -n "$EXISTING" ]; then
+        echo "Session $SESSION_NAME already exists (PID $EXISTING), skipping duplicate start"
+        exit 0
     fi
-    # Kill any existing screen sessions with same name
-    for sock in $(screen -ls 2>/dev/null | grep "$SESSION_NAME" | awk -F. '{print $1}' | awk '{print $1}'); do
-        screen -S "$sock" -X quit 2>/dev/null || true
-    done
-}
-_screen_cleanup
+fi
 
 log "Wrapper started. Working directory: $WORK_DIR, Model: $MODEL"
 log "Claude binary: $CLAUDE_BIN"
