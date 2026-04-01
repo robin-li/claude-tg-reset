@@ -32,8 +32,13 @@ for f in reset-monitor.py claude-wrapper.sh; do
     fi
 done
 
-# Remove stop file if exists
+# Remove stop and reset flag files
 rm -f "$INSTALL_DIR/.stop"
+rm -f "$INSTALL_DIR/.reset"
+
+# Clean up dead screen sessions
+echo "  Cleaning up dead screen sessions..."
+screen -wipe 2>/dev/null || true
 
 # Clean up empty directory
 echo "[3/3] Cleaning up..."
