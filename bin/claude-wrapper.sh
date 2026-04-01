@@ -10,6 +10,7 @@ CLAUDE_BIN="$(command -v claude 2>/dev/null || echo "$HOME/.local/bin/claude")"
 STOP_FILE="$HOME/.claude/scripts/.stop"
 LOG_DIR="$HOME/.claude/logs"
 LOG_FILE="$LOG_DIR/claude-wrapper.log"
+SESSION_NAME="claude-tg"
 
 WORK_DIR="$HOME"
 MODEL="sonnet"
@@ -35,6 +36,16 @@ log() {
 }
 
 rm -f "$STOP_FILE"
+
+# Ensure only one screen session exists for this wrapper
+# Kill any existing session with same name to prevent duplicates
+_screen_cleanup() {
+    # Find all screen sockets matching our session name and kill them
+    for sock in $(screen -ls 2>/dev/null | grep "$SESSION_NAME" | awk -F. '{print $1}' | awk '{print $1}'); do
+        screen -S "$sock" -X quit 2>/dev/null || true
+    done
+}
+_screen_cleanup
 
 log "Wrapper started. Working directory: $WORK_DIR, Model: $MODEL"
 log "Claude binary: $CLAUDE_BIN"
