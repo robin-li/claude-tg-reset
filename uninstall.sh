@@ -2,21 +2,26 @@
 set -e
 
 INSTALL_DIR="$HOME/.claude/scripts"
-PLIST_NAME="com.claude.reset-monitor"
-PLIST_PATH="$HOME/Library/LaunchAgents/$PLIST_NAME.plist"
+MONITOR_PLIST_NAME="com.claude.reset-monitor"
+MONITOR_PLIST_PATH="$HOME/Library/LaunchAgents/$MONITOR_PLIST_NAME.plist"
+WRAPPER_PLIST_NAME="com.claude.claude-wrapper"
+WRAPPER_PLIST_PATH="$HOME/Library/LaunchAgents/$WRAPPER_PLIST_NAME.plist"
 
 echo "=== claude-tg-reset uninstaller ==="
 echo ""
 
-# Stop service
-echo "[1/3] Stopping reset monitor service..."
-if [ -f "$PLIST_PATH" ]; then
-    launchctl unload "$PLIST_PATH" 2>/dev/null || true
-    rm -f "$PLIST_PATH"
-    echo "  Service stopped and plist removed."
-else
-    echo "  No launchd service found. Skipped."
-fi
+# Stop services
+echo "[1/3] Stopping services..."
+for PLIST_PATH in "$MONITOR_PLIST_PATH" "$WRAPPER_PLIST_PATH"; do
+    if [ -f "$PLIST_PATH" ]; then
+        launchctl unload "$PLIST_PATH" 2>/dev/null || true
+        rm -f "$PLIST_PATH"
+        echo "  Stopped and removed: $PLIST_PATH"
+    fi
+done
+
+# Kill any lingering screen session
+screen -S claude-tg -X quit 2>/dev/null || true
 
 # Remove scripts
 echo "[2/3] Removing scripts..."
